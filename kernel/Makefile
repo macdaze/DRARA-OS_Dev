@@ -23,6 +23,7 @@ all: edk2 $(TARGET)
 .PHONY: clean
 clean:
 	rm -rf *.o
+	find . \( -name "*.o" -o -name "*.d" \) -delete
 
 .PHONY: run
 run: kernel.elf

@@ -17,3 +17,8 @@ IoIn32:
     MOV DX, DI      ; DX = addr
     IN EAX ,DX
     ret
+
+global ReadCR3  ; uintptr_t ReadCR3();
+ReadCR3:
+    MOV RAX, CR3
+    ret

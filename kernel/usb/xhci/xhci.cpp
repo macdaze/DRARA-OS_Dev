@@ -5,6 +5,7 @@
 #include "usb/device.hpp"
 #include "usb/descriptor.hpp"
 #include "usb/xhci/speed.hpp"
+#include "/Users/yuji/workspace/DRARA-OS_Develop/kernel/asmfunc.h"
 
 namespace {
   using namespace usb::xhci;
@@ -281,6 +282,9 @@ namespace {
   }
 
   void RequestHCOwnership(uintptr_t mmio_base, HCCPARAMS1_Bitmap hccp) {
+      uintptr_t CR3;
+      CR3 = ReadCR3();
+      Log (kError, "CR3 = %p\n", CR3);
       Log (kError, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
     ExtendedRegisterList extregs{ mmio_base, hccp };
     Log (kError, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
