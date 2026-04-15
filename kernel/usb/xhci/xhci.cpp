@@ -284,13 +284,13 @@ namespace {
   void RequestHCOwnership(uintptr_t mmio_base, HCCPARAMS1_Bitmap hccp) {
       uintptr_t* PML4 = reinterpret_cast<uintptr_t *>(ReadCR3());
       Log (kError, "PML4 = %p\n", PML4);
-      uintptr_t* PDP = PML4[0x1];
+      uintptr_t* PDP = reinterpret_cast<uintptr_t *>(PML4[0x1]);
       Log (kError, "PDP = %p\n", PDP);
-      uintptr_t* PD = PDP[0x100];
+      uintptr_t* PD = reinterpret_cast<uintptr_t *>(PDP[0x100]);
       Log (kError, "PD = %p\n", PD);
-      uintptr_t* PT = PD[0x11];
+      uintptr_t* PT = reinterpret_cast<uintptr_t *>(PD[0x11]);
       Log (kError, "PT =%p\n", PT);
-      uintptr_t* frame = PT[0x80];
+      uintptr_t* frame = reinterpret_cast<uintptr_t *>(PT[0x80]);
       Log (kError, "frame = %p\n", frame);
       uintptr_t* physical_address = (frame + 0x0);
       Log (kError, "physical_address = %0x\n", physical_address);
