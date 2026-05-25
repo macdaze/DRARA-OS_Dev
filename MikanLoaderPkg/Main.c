@@ -88,7 +88,7 @@ const CHAR16* GetMemoryTypeUnicode(EFI_MEMORY_TYPE type) {
 
 EFI_STATUS SaveMemoryMap(struct MemoryMap* map, EFI_FILE_PROTOCOL* file) {
     EFI_STATUS status;
-    CHAR8 buf[256];
+    CHAR8 buf[512];
     UINTN len;
 
     CHAR8* header =
@@ -238,7 +238,6 @@ EFI_STATUS EFIAPI UefiMain(
 
     CHAR8 memmap_buf[4096 * 16];
     struct MemoryMap memmap = {sizeof(memmap_buf), memmap_buf, 0, 0, 0, 0};
-    SetupIdentityPageTable();
     status = GetMemoryMap(&memmap);
     if (EFI_ERROR(status)) {
         Print(L"Failed to get memory map: %r\n", status);

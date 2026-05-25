@@ -18,6 +18,7 @@
 #include "usb/xhci/trb.hpp"
 #include "font.hpp"
 #include "console.hpp"
+#include "paging.hpp"
 
 // void* operator new (size_t size, void* buf) noexcept {
 //     return buf;
@@ -70,7 +71,7 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
                 0x8086 == pci::ReadVendorId(pci::devices[i])) {
             intel_ehc_exist = true;
             break;
-        }
+                }
     }
     if (!intel_ehc_exist) {
         return;
@@ -84,8 +85,8 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
             superspeed_ports, ehci2xhci_ports);
 }
 
-extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config)
-{
+extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             pixel_writer = new(pixel_writer_buf)
@@ -114,17 +115,21 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config)
             {100, 100, 100});
 
     console = new(console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
+
+    SetLogLevel (kDebug);
+    SetupIdentityPageTable();
+    SetLogLevel (kWarn);
+
     printk("Welcome to DRARA-OS!\n");
     printk("\n");
     printk("2543 * 15 + 8 = %d\n", 2543 * 15 + 8);
-    SetLogLevel(kWarn);
 
     mouse_cursor = new(mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}
           };
 
     auto err = pci::ScanAllBus();
-    SetLogLevel(kDebug);
+    SetLogLevel(kWarn);
     Log(kDebug, "ScanAllBus: %s\n", err.Name());
 
 
@@ -171,7 +176,7 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config)
             SetLogLevel(kWarn);
         }
 
-        Log(kError, "xHC starting\n");
+        Log(kInfo, "xHC starting\n");
         xhc.Run();
 
         usb::HIDMouseDriver::default_observer = MouseObserver;
@@ -182,7 +187,7 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config)
 
             if (port.IsConnected()) {
                 if (auto err = ConfigurePort(xhc, port)) {
-                    Log(kError, "Failed to Configure port: %s at %s:%d\n",
+                    Log(kWarn, "Failed to Configure port: %s at %s:%d\n",
                             err.Name(), err.File(), err.Line());
                     continue;
                 }
@@ -191,7 +196,7 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config)
 
         while (1) {
             if (auto err = ProcessEvent(xhc)) {
-                Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+                Log(kWarn, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
                         }
             }
 

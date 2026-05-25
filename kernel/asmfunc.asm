@@ -22,3 +22,8 @@ global ReadCR3  ; uintptr_t ReadCR3();
 ReadCR3:
     MOV RAX, CR3
     ret
+
+global SetCR3   ; void SetCR3(uint64_t value);
+SetCR3:
+    MOV CR3, RDI
+    ret

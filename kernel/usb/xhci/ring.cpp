@@ -2,7 +2,7 @@
 
 #include "usb/memory.hpp"
 
-#include "/Users/yuji/workspace/DRARA-OS_Develop/kernel/logger.hpp"
+#include "/Users/yuji/workspace/DRARA-OS_Dev/kernel/logger.hpp"
 
 namespace usb::xhci {
   Ring::~Ring() {

@@ -82,7 +82,7 @@ namespace usb::xhci {
   }
 
   Error Device::Initialize() {
-      Log(kError, "Initialize start");
+      Log(kInfo, "Initialize start");
     state_ = State::kBlank;
     for (size_t i = 0; i < 31; ++i) {
       const DeviceContextIndex dci(i + 1);

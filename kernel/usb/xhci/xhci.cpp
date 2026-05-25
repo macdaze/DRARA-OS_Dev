@@ -5,7 +5,7 @@
 #include "usb/device.hpp"
 #include "usb/descriptor.hpp"
 #include "usb/xhci/speed.hpp"
-#include "/Users/yuji/workspace/DRARA-OS_Develop/kernel/asmfunc.h"
+#include "/Users/yuji/workspace/DRARA-OS_Dev/kernel/asmfunc.h"
 
 namespace {
   using namespace usb::xhci;
@@ -283,21 +283,21 @@ namespace {
 
   void RequestHCOwnership(uintptr_t mmio_base, HCCPARAMS1_Bitmap hccp) {
       uintptr_t* PML4 = reinterpret_cast<uintptr_t *>(ReadCR3());
-      Log (kError, "PML4 = %p\n", PML4);
+      Log (kInfo, "PML4 = %p\n", PML4);
       uintptr_t* PDP = reinterpret_cast<uintptr_t *>(PML4[0x1]);
-      Log (kError, "PDP = %p\n", PDP);
+      Log (kInfo, "PDP = %p\n", PDP);
       uintptr_t* PD = reinterpret_cast<uintptr_t *>(PDP[0x100]);
-      Log (kError, "PD = %p\n", PD);
+      Log (kInfo, "PD = %p\n", PD);
       uintptr_t* PT = reinterpret_cast<uintptr_t *>(PD[0x11]);
-      Log (kError, "PT =%p\n", PT);
+      Log (kInfo, "PT =%p\n", PT);
       uintptr_t* frame = reinterpret_cast<uintptr_t *>(PT[0x80]);
-      Log (kError, "frame = %p\n", frame);
+      Log (kInfo, "frame = %p\n", frame);
       uintptr_t* physical_address = (frame + 0x0);
-      Log (kError, "physical_address = %0x\n", physical_address);
+      Log (kInfo, "physical_address = %0x\n", physical_address);
 
-      Log (kError, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
+      Log (kInfo, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
     ExtendedRegisterList extregs{ mmio_base, hccp };
-    Log (kError, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
+    Log (kInfo, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
        auto it = extregs.begin();
 
     auto ext_usblegsup = std::find_if(
@@ -344,7 +344,7 @@ namespace usb::xhci {
     if (auto err = devmgr_.Initialize(kDeviceSize)) {
       return err;
     }
-    Log(kError, "CAPLENGTH = %0x\nHCIVERSION = %0x\n", cap_->CAPLENGTH.Read(), cap_->HCIVERSION.Read());
+    Log(kDebug, "CAPLENGTH = %0x\nHCIVERSION = %0x\n", cap_->CAPLENGTH.Read(), cap_->HCIVERSION.Read());
     RequestHCOwnership(mmio_base_, cap_->HCCPARAMS1.Read());
 
 
