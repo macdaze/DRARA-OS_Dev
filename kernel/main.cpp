@@ -19,6 +19,7 @@
 #include "font.hpp"
 #include "console.hpp"
 #include "paging.hpp"
+#include "interrupt.hpp"
 
 // void* operator new (size_t size, void* buf) noexcept {
 //     return buf;
@@ -88,8 +89,8 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
 __attribute__((interrupt))
 void ExceptionHandler(InterruptFrame* frame, uint64_t error_code) {
     FillRectangle(*pixel_writer,
-        {0,0}
-        {kFrameWidth, kFrameHeight}
+        {0,0},
+        {600, 600},
         {255, 255, 255});
     while (1) __asm__("HLT");
 }

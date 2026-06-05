@@ -22,8 +22,8 @@ union InterruptDescriptorAttribute {
         uint16_t : 1;
         uint16_t descriptor_privilege_level : 2;
         uint16_t present : 1;
-    }__attribute__((packed)) bits;
-}__attribute__((packed));
+    } __attribute__((packed)) bits;
+} __attribute__((packed));
 
 struct InterruptDescriptor {
     uint16_t offset_low;
@@ -32,16 +32,16 @@ struct InterruptDescriptor {
     uint16_t offset_middle;
     uint16_t offset_high;
     uint16_t reserved;
-}__attribue__((packed));
+} __attribute__((packed));
 
 extern std::array<InterruptDescriptor, 256> idt;
 
 constexpr InterruptDescriptorAttribute MakeIDTAttr(
-    DescriptorType type
+    DescriptorType type,
     uint16_t descriptor_privilege_level,
     bool present = true,
     uint8_t interrupt_stack_table = 0) {
-    InterruptDescriptorAtribute attr{};
+    InterruptDescriptorAttribute attr{};
     attr.bits.interrupt_stack_table = interrupt_stack_table;
     attr.bits.type = type;
     attr.bits.descriptor_privilege_level = descriptor_privilege_level;
