@@ -85,6 +85,15 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
             superspeed_ports, ehci2xhci_ports);
 }
 
+__attribute__((interrupt))
+void ExceptionHandler(InterruptFrame* frame, uint64_t error_code) {
+    FillRectangle(*pixel_writer,
+        {0,0}
+        {kFrameWidth, kFrameHeight}
+        {255, 255, 255});
+    while (1) __asm__("HLT");
+}
+
 extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
 
     switch (frame_buffer_config.pixel_format) {

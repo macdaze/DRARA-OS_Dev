@@ -27,3 +27,15 @@ global SetCR3   ; void SetCR3(uint64_t value);
 SetCR3:
     MOV CR3, RDI
     ret
+
+global SetIDT   ; void SetIDT(uint16_t limit, uint64_t offset);
+SetIDT:
+    PUSH RBP
+    MOV RBP, RSP
+    SUB RSP, 10
+    MOV [RSP], DI
+    MOV [RSP + 2], RSI
+    LIDT [RSP]
+    MOV RSP, RBP
+    POP RBP
+    ret
