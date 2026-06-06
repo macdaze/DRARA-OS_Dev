@@ -20,6 +20,7 @@
 #include "console.hpp"
 #include "paging.hpp"
 #include "interrupt.hpp"
+#include "asmfunc.h"
 
 // void* operator new (size_t size, void* buf) noexcept {
 //     return buf;
@@ -166,7 +167,13 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
         Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
         SetLogLevel(kWarn);
-        
+
+        const uint16_t cs = GetCS();
+        for (int HandlerNumber = 0; HandlerNumber <= 21; ++HandlerNumber) {
+            SetIDTEntry(idt[HandlerNumber], MakeIDTAttr(DescriptorType::kInterruptGate,0), reinterpret_cast<uint64_t>(ExceptionHandler), cs);
+        }
+        LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+
         usb::xhci::Controller xhc{xhc_mmio_base};
 
         if (0x8086 == pci::ReadVendorId(*xhc_dev)) {

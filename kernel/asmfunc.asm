@@ -28,8 +28,14 @@ SetCR3:
     MOV CR3, RDI
     ret
 
-global SetIDT   ; void SetIDT(uint16_t limit, uint64_t offset);
-SetIDT:
+global GetCS    ; uint16_t GetCS(void);
+GetCS:
+    XOR EAX, EAX
+    MOV AX, CX
+    ret
+
+global LoadIDT   ; void LoadIDT(uint16_t limit, uint64_t offset);
+LoadIDT:
     PUSH RBP
     MOV RBP, RSP
     SUB RSP, 10
