@@ -31,6 +31,7 @@ run: kernel.elf
 		$(HOME)/edk2/Build/MikanLoaderX64/DEBUG_CLANGPDB/X64/Loader.efi \
 		$(HOME)/workspace/DRARA-OS_Dev/kernel/kernel.elf
 
+
 edk2: ../MikanLoaderPkg/Main.c
 	zsh -c 'cd $(HOME)/edk2 && source edksetup.sh && build'
 

@@ -5,18 +5,18 @@ namespace {
     using namespace pci;
 
     uint32_t MakeAddress(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg_addr) {
-        auto shl = [] (uint32_t x, unsigned int bits) {
+        auto shl = [](uint32_t x, unsigned int bits) {
             return x << bits;
         };
-        
+
         return shl(1, 31)
-            | shl(bus, 16)
-            | shl(device, 11)
-            | shl(function, 8)
-            | (reg_addr & 0xfcu);
+               | shl(bus, 16)
+               | shl(device, 11)
+               | shl(function, 8)
+               | (reg_addr & 0xfcu);
     }
 
-    Error AddDevice(const Device& device) {
+    Error AddDevice(const Device &device) {
         if (num_device == devices.size()) {
             return MAKE_ERROR(Error::kFull);
         }
@@ -45,34 +45,34 @@ namespace {
     }
 
     Error ScanDevice(uint8_t bus, uint8_t device) {
-            if (auto err = ScanFunction(bus, device, 0)) {
+        if (auto err = ScanFunction(bus, device, 0)) {
             return err;
-            }
-            if (IsSingleFunctionDevice(ReadHeaderType(bus, device, 0))) {
+        }
+        if (IsSingleFunctionDevice(ReadHeaderType(bus, device, 0))) {
             return MAKE_ERROR(Error::kSuccess);
-            }
-            
-            for (uint8_t function = 1; function < 8; ++function) {
+        }
+
+        for (uint8_t function = 1; function < 8; ++function) {
             if (ReadVendorId(bus, device, function) == 0xffffu) {
-            continue;
+                continue;
             }
             if (auto err = ScanFunction(bus, device, function)) {
-            return err;
+                return err;
             }
         }
         return MAKE_ERROR(Error::kSuccess);
     }
 
     Error ScanBus(uint8_t bus) {
-    for (uint8_t device = 0; device < 32; ++device) {
-        if (ReadVendorId(bus, device, 0) == 0xffffu) {
-            continue;
+        for (uint8_t device = 0; device < 32; ++device) {
+            if (ReadVendorId(bus, device, 0) == 0xffffu) {
+                continue;
+            }
+            if (auto err = ScanDevice(bus, device)) {
+                return err;
+            }
         }
-        if(auto err = ScanDevice(bus, device)) {
-            return err;
-        }
-    }
-    return MAKE_ERROR(Error::kSuccess);
+        return MAKE_ERROR(Error::kSuccess);
     }
 }
 
@@ -135,24 +135,24 @@ namespace pci {
             if (ReadVendorId(0, 0, function) == 0xffffu) {
                 continue;
             }
-            if(auto err = ScanBus(function)) {
+            if (auto err = ScanBus(function)) {
                 return err;
             }
         }
         return MAKE_ERROR(Error::kSuccess);
     }
 
-    uint32_t ReadConfReg(const Device& dev, uint8_t reg_addr) {
+    uint32_t ReadConfReg(const Device &dev, uint8_t reg_addr) {
         WriteAddress(MakeAddress(dev.bus, dev.device, dev.function, reg_addr));
         return ReadData();
     }
 
-    void WriteConfReg(const Device& dev, uint8_t reg_addr, uint32_t value) {
+    void WriteConfReg(const Device &dev, uint8_t reg_addr, uint32_t value) {
         WriteAddress(MakeAddress(dev.bus, dev.device, dev.function, reg_addr));
         WriteData(value);
     }
 
-    WithError<uint64_t> ReadBar(Device& device, unsigned int bar_index) {
+    WithError<uint64_t> ReadBar(Device &device, unsigned int bar_index) {
         if (bar_index >= 6) {
             return {0, MAKE_ERROR(Error::kIndexOutOfRange)};
         }
@@ -174,8 +174,4 @@ namespace pci {
             MAKE_ERROR(Error::kSuccess)
         };
     }
-
-
 }
-
-

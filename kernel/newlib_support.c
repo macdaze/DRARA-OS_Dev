@@ -7,7 +7,7 @@ void _exit(void) {
 
 caddr_t sbrk(int incr) {
     errno = ENOMEM;
-    return (caddr_t)-1;
+    return (caddr_t) - 1;
 }
 
 int getpid(void) {
@@ -18,4 +18,3 @@ int kill(int pid, int sig) {
     errno = EINVAL;
     return -1;
 }
-

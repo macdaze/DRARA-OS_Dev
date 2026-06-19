@@ -50,5 +50,6 @@ struct Vector2D {
 void DrawRectangle(PixelWriter& writer, const Vector2D<int>& pos,
         const Vector2D<int>& size, const PixelColor& c);
 
+__attribute__((no_caller_saved_registers))
 void FillRectangle(PixelWriter& writer, const Vector2D<int>& pos,
         const Vector2D<int>& size, const PixelColor& c);

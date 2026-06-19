@@ -32,21 +32,20 @@
 
 // void operator delete(void* obj, unsigned long size) noexcept {
 // }
-
 const PixelColor kDesktopBGColor{70, 100, 160};
 const PixelColor kDesktopFGColor{255, 255, 255};
 
 extern "C" void __cxa_pure_virtual() {
-  while (1) __asm__("HLT");
+    while (1) __asm__("HLT");
 }
 
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
-PixelWriter* pixel_writer;
+PixelWriter *pixel_writer;
 
 char console_buf[sizeof(Console)];
-Console* console;
+Console *console;
 
-int printk(const char* format, ...) {
+int printk(const char *format, ...) {
     va_list ap;
     int result;
     char s[1024];
@@ -60,20 +59,20 @@ int printk(const char* format, ...) {
 }
 
 char mouse_cursor_buf[sizeof(MouseCursor)];
-MouseCursor* mouse_cursor;
+MouseCursor *mouse_cursor;
 
 void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
     mouse_cursor->MoveRelative({displacement_x, displacement_y});
 }
 
-void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
+void SwitchEhci2Xhci(const pci::Device &xhc_dev) {
     bool intel_ehc_exist = false;
     for (int i = 0; i < pci::num_device; ++i) {
         if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x20u) &&
-                0x8086 == pci::ReadVendorId(pci::devices[i])) {
+            0x8086 == pci::ReadVendorId(pci::devices[i])) {
             intel_ehc_exist = true;
             break;
-                }
+        }
     }
     if (!intel_ehc_exist) {
         return;
@@ -84,28 +83,37 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
     uint32_t ehci2xhci_ports = pci::ReadConfReg(xhc_dev, 0xd4);
     pci::WriteConfReg(xhc_dev, 0xd0, ehci2xhci_ports);
     Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n",
-            superspeed_ports, ehci2xhci_ports);
+        superspeed_ports, ehci2xhci_ports);
 }
 
 __attribute__((interrupt))
-void ExceptionHandler(InterruptFrame* frame, uint64_t error_code) {
+void ExceptionHandlerWithError(InterruptFrame *frame, uint64_t error_code) {
     FillRectangle(*pixel_writer,
-        {0,0},
-        {600, 600},
-        {255, 255, 255});
+                  {0, 0},
+                  {600, 600},
+                  {255, 255, 255});
     while (1) __asm__("HLT");
 }
 
-extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+__attribute__((interrupt))
+void ExceptionHandlerWithoutError(InterruptFrame *frame) {
+    FillRectangle(*pixel_writer,
+                  {0, 0},
+                  {600, 600},
+                  {255, 255, 255});
+    while (1) __asm__("HLT");
+}
 
+
+extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             pixel_writer = new(pixel_writer_buf)
-                RGBResv8BitPerColorPixelWriter{frame_buffer_config};
+                    RGBResv8BitPerColorPixelWriter{frame_buffer_config};
             break;
         case kPixelBGRResv8BitPerColor:
             pixel_writer = new(pixel_writer_buf)
-                BGRResv8BitPerColorPixelWriter{frame_buffer_config};
+                    BGRResv8BitPerColorPixelWriter{frame_buffer_config};
             break;
     }
 
@@ -113,23 +121,23 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
     const int kFrameHeight = frame_buffer_config.vertical_resolution;
 
     FillRectangle(*pixel_writer,
-            {0, 0},
-            {kFrameWidth, kFrameHeight - 50},
-            kDesktopBGColor);
+                  {0, 0},
+                  {kFrameWidth, kFrameHeight - 50},
+                  kDesktopBGColor);
     FillRectangle(*pixel_writer,
-            {0, kFrameHeight - 50},
-            {kFrameWidth, 50},
-            {190, 190, 190});
+                  {0, kFrameHeight - 50},
+                  {kFrameWidth, 50},
+                  {190, 190, 190});
     DrawRectangle(*pixel_writer,
-            {10, kFrameHeight - 40},
-            {60, 30},
-            {100, 100, 100});
+                  {10, kFrameHeight - 40},
+                  {60, 30},
+                  {100, 100, 100});
 
     console = new(console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
 
-    SetLogLevel (kDebug);
+    SetLogLevel(kDebug);
     SetupIdentityPageTable();
-    SetLogLevel (kWarn);
+    SetLogLevel(kWarn);
 
     printk("Welcome to DRARA-OS!\n");
     printk("\n");
@@ -137,14 +145,14 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
 
     mouse_cursor = new(mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}
-          };
+    };
 
     auto err = pci::ScanAllBus();
     SetLogLevel(kWarn);
     Log(kDebug, "ScanAllBus: %s\n", err.Name());
 
 
-    pci::Device* xhc_dev = nullptr;
+    pci::Device *xhc_dev = nullptr;
     for (int i = 0; i < pci::num_device; ++i) {
         if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u)) {
             xhc_dev = &pci::devices[i];
@@ -156,10 +164,11 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
     }
 
     if (xhc_dev) {
-        const auto& dev = *xhc_dev;
+        const auto &dev = *xhc_dev;
         auto vendor_id = pci::ReadVendorId(dev);
         auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
-        Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id, class_code, dev.header_type);
+        Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id,
+            class_code, dev.header_type);
 
         Log(kDebug, "xHC has been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
         const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
@@ -169,9 +178,9 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         SetLogLevel(kWarn);
 
         const uint16_t cs = GetCS();
-        for (int HandlerNumber = 0; HandlerNumber <= 21; ++HandlerNumber) {
-            SetIDTEntry(idt[HandlerNumber], MakeIDTAttr(DescriptorType::kInterruptGate,0), reinterpret_cast<uint64_t>(ExceptionHandler), cs);
-        }
+        SetupBasicExceptionHandler(MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithoutError),
+                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithError), cs);
         LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
         usb::xhci::Controller xhc{xhc_mmio_base};
@@ -179,13 +188,14 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         if (0x8086 == pci::ReadVendorId(*xhc_dev)) {
             SwitchEhci2Xhci(*xhc_dev);
         }
-            for (int i = 0; i < pci::num_device; ++i) {
-        const auto& dev = pci::devices[i];
-        auto vendor_id = pci::ReadVendorId(dev);
-        auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
-        Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id, class_code, dev.header_type);
-    }
-        
+        for (int i = 0; i < pci::num_device; ++i) {
+            const auto &dev = pci::devices[i];
+            auto vendor_id = pci::ReadVendorId(dev);
+            auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
+            Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id,
+                class_code, dev.header_type);
+        }
+
         {
             SetLogLevel(kDebug);
             auto err = xhc.Initialize();
@@ -205,7 +215,7 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
             if (port.IsConnected()) {
                 if (auto err = ConfigurePort(xhc, port)) {
                     Log(kWarn, "Failed to Configure port: %s at %s:%d\n",
-                            err.Name(), err.File(), err.Line());
+                        err.Name(), err.File(), err.Line());
                     continue;
                 }
             }
@@ -214,11 +224,9 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         while (1) {
             if (auto err = ProcessEvent(xhc)) {
                 Log(kWarn, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-                        }
             }
+        }
 
-            while (1) __asm__("HLT");
-
+        while (1) __asm__("HLT");
     }
-
 }
