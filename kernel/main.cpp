@@ -106,6 +106,7 @@ void ExceptionHandlerWithoutError(InterruptFrame *frame) {
 
 
 extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+    SetLogLevel(kWarn);
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             pixel_writer = new(pixel_writer_buf)
@@ -135,9 +136,7 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
 
     console = new(console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
 
-    SetLogLevel(kDebug);
     SetupIdentityPageTable();
-    SetLogLevel(kWarn);
 
     printk("Welcome to DRARA-OS!\n");
     printk("\n");
@@ -148,7 +147,6 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
     };
 
     auto err = pci::ScanAllBus();
-    SetLogLevel(kWarn);
     Log(kDebug, "ScanAllBus: %s\n", err.Name());
 
 
@@ -175,7 +173,6 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
         const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
         Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
-        SetLogLevel(kWarn);
 
         const uint16_t cs = GetCS();
         SetupBasicExceptionHandler(MakeIDTAttr(DescriptorType::kInterruptGate, 0),
@@ -197,10 +194,8 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
         }
 
         {
-            SetLogLevel(kDebug);
             auto err = xhc.Initialize();
             Log(kInfo, "xhc.Initialize: %s\n", err.Name());
-            SetLogLevel(kWarn);
         }
 
         Log(kInfo, "xHC starting\n");
