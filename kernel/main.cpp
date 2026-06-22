@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "frame_buffer_config.hpp"
+#include "memory_map.hpp"
 #include "graphics.hpp"
 #include "mouse.hpp"
 #include "pci.hpp"
@@ -104,8 +105,11 @@ void ExceptionHandlerWithoutError(InterruptFrame *frame) {
     while (1) __asm__("HLT");
 }
 
+alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
-extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref) {
+    FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
+    MemoryMap memory_map{memory_map_ref};
     SetLogLevel(kWarn);
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
@@ -136,11 +140,35 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
 
     console = new(console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
 
-    SetupIdentityPageTable();
-
     printk("Welcome to DRARA-OS!\n");
     printk("\n");
     printk("2543 * 15 + 8 = %d\n", 2543 * 15 + 8);
+
+    const std::array available_memory_types{
+        MemoryType::kEfiBootServicesCode,
+        MemoryType::kEfiBootServicesData,
+        MemoryType::kEfiConventionalMemory,
+    };
+
+    Log(kDebug, "memory_map: %p\n", &memory_map);
+    /*
+    for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
+         iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
+         iter += memory_map.descriptor_size) {
+        auto desc = reinterpret_cast<MemoryDescriptor *>(iter);
+        for (int i = 0; i < available_memory_types.size(); ++i) {
+            if (desc->type == available_memory_types[i]) {
+                printk("type = %u, phys = %08lx - %08lx, pages = %lu\n",
+                       desc->type,
+                       desc->physical_start,
+                       desc->physical_start + desc->number_of_pages * 4096 - 1,
+                       desc->number_of_pages);
+            }
+        }
+    }
+    */
+
+    SetupIdentityPageTable();
 
     mouse_cursor = new(mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}
