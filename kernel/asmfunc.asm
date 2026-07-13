@@ -58,7 +58,7 @@ LoadGDT:
     POP RBP
     ret
 
-global SeCSSS   ;   void SetCSSSS(uint16_t cs, uint16_t ss);
+global SetCSSS   ;   void SetCSSSS(uint16_t cs, uint16_t ss);
 SetCSSS:
     PUSH RBP
     MOV RBP, RSP

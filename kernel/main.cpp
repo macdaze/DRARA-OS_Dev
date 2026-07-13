@@ -19,20 +19,23 @@
 #include "usb/xhci/trb.hpp"
 #include "font.hpp"
 #include "console.hpp"
+#include "segment.hpp"
 #include "paging.hpp"
 #include "interrupt.hpp"
 #include "asmfunc.h"
 
-// void* operator new (size_t size, void* buf) noexcept {
-//     return buf;
-// }
+/*
+void* operator new (size_t size, void* buf) noexcept {
+     return buf;
+}
 
+void operator delete(void* obj) noexcept {
+}
 
-// void operator delete(void* obj) noexcept {
-// }
+void operator delete(void* obj, unsigned long size) noexcept {
+}
+*/
 
-// void operator delete(void* obj, unsigned long size) noexcept {
-// }
 const PixelColor kDesktopBGColor{70, 100, 160};
 const PixelColor kDesktopFGColor{255, 255, 255};
 
@@ -144,6 +147,26 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     printk("\n");
     printk("2543 * 15 + 8 = %d\n", 2543 * 15 + 8);
 
+    SetupSegments();
+    Log(kInfo, "SetupSegments is finished\n");
+
+    const uint16_t kernel_cs = 1 << 3;
+    const uint16_t kernel_ss = 2 << 3;
+    SetDSAll(0);
+    SetCSSS(kernel_cs, kernel_ss);
+    const uint16_t cs = GetCS();
+    SetupBasicExceptionHandler(MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+                               reinterpret_cast<uint64_t>(ExceptionHandlerWithoutError),
+                               reinterpret_cast<uint64_t>(ExceptionHandlerWithError), cs);
+
+    LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+
+    uintptr_t CR3 = ReadCR3();
+    uintptr_t page_table_top = MakeIdentityPageTable();
+    uintptr_t BAR0_top = 0x10 + 4 * 0;
+    EditPageTable(&page_table_top, BAR0_top, FindPhysicalAddress(BAR0_top, CR3), 160);
+    SetCR3(page_table_top);
+
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
         MemoryType::kEfiBootServicesData,
@@ -151,7 +174,8 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     };
 
     Log(kDebug, "memory_map: %p\n", &memory_map);
-    /*
+
+    const auto memory_map_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
          iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
          iter += memory_map.descriptor_size) {
@@ -166,9 +190,6 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
             }
         }
     }
-    */
-
-    SetupIdentityPageTable();
 
     mouse_cursor = new(mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}
@@ -191,6 +212,7 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
 
     if (xhc_dev) {
         const auto &dev = *xhc_dev;
+
         auto vendor_id = pci::ReadVendorId(dev);
         auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
         Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id,
@@ -201,12 +223,6 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
         Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
         const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
         Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
-
-        const uint16_t cs = GetCS();
-        SetupBasicExceptionHandler(MakeIDTAttr(DescriptorType::kInterruptGate, 0),
-                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithoutError),
-                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithError), cs);
-        LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
         usb::xhci::Controller xhc{xhc_mmio_base};
 
