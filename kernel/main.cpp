@@ -90,6 +90,16 @@ void SwitchEhci2Xhci(const pci::Device &xhc_dev) {
         superspeed_ports, ehci2xhci_ports);
 }
 
+void ControlCaching(bool enable) {
+    if (enable) {
+        uint32_t CR0 = ReadCR0();
+        SetCR0(CR0 &= ~0x60000000);
+    } else {
+        uint32_t CR0 = ReadCR0();
+        SetCR0(CR0 |= 0x60000000);
+    }
+}
+
 __attribute__((interrupt))
 void ExceptionHandlerWithError(InterruptFrame *frame, uint64_t error_code) {
     FillRectangle(*pixel_writer,
@@ -161,11 +171,13 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
 
     LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
+/*
     uintptr_t CR3 = ReadCR3();
     uintptr_t page_table_top = MakeIdentityPageTable();
     uintptr_t BAR0_top = 0x10 + 4 * 0;
     EditPageTable(&page_table_top, BAR0_top, FindPhysicalAddress(BAR0_top, CR3), 160);
     SetCR3(page_table_top);
+*/
 
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
@@ -237,10 +249,16 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
                 class_code, dev.header_type);
         }
 
+        ControlCaching(false);
+        Log(kError, "Caching is disabled\n");
+
         {
             auto err = xhc.Initialize();
             Log(kInfo, "xhc.Initialize: %s\n", err.Name());
         }
+
+        ControlCaching(true);
+        Log(kError, "Caching is enabled\n");
 
         Log(kInfo, "xHC starting\n");
         xhc.Run();

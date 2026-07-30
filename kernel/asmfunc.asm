@@ -18,6 +18,16 @@ IoIn32:
     IN EAX ,DX
     ret
 
+global ReadCR0   ; uint32_t ReadCR0();
+ReadCR0:
+    MOV RAX, CR0
+    ret
+
+global SetCR0   ; void SetCR0(uint32_t CR0);
+SetCR0:
+    MOV CR0, RDI
+    ret
+
 global ReadCR3  ; uintptr_t ReadCR3();
 ReadCR3:
     MOV RAX, CR3
