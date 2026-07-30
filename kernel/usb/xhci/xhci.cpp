@@ -282,24 +282,10 @@ namespace {
   }
 
   void RequestHCOwnership(uintptr_t mmio_base, HCCPARAMS1_Bitmap hccp) {
-      uintptr_t* PML4 = reinterpret_cast<uintptr_t *>(ReadCR3());
-      Log (kInfo, "PML4 = %p\n", PML4);
-      uintptr_t* PDP = reinterpret_cast<uintptr_t *>(PML4[0x1]);
-      Log (kInfo, "PDP = %p\n", PDP);
-      uintptr_t* PD = reinterpret_cast<uintptr_t *>(PDP[0x100]);
-      Log (kInfo, "PD = %p\n", PD);
-      uintptr_t* PT = reinterpret_cast<uintptr_t *>(PD[0x11]);
-      Log (kInfo, "PT =%p\n", PT);
-      uintptr_t* frame = reinterpret_cast<uintptr_t *>(PT[0x80]);
-      Log (kInfo, "frame = %p\n", frame);
-      uintptr_t* physical_address = (frame + 0x0);
-      Log (kInfo, "physical_address = %0x\n", physical_address);
-
       Log (kInfo, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
     ExtendedRegisterList extregs{ mmio_base, hccp };
     Log (kInfo, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
        auto it = extregs.begin();
-
     auto ext_usblegsup = std::find_if(
         extregs.begin(), extregs.end(),
         [](auto& reg) { return reg.Read().bits.capability_id == 1; });
