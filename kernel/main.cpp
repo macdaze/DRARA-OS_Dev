@@ -39,10 +39,6 @@ void operator delete(void* obj, unsigned long size) noexcept {
 const PixelColor kDesktopBGColor{70, 100, 160};
 const PixelColor kDesktopFGColor{255, 255, 255};
 
-extern "C" void __cxa_pure_virtual() {
-    while (1) __asm__("HLT");
-}
-
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
 PixelWriter *pixel_writer;
 
@@ -118,6 +114,19 @@ void ExceptionHandlerWithoutError(InterruptFrame *frame) {
     while (1) __asm__("HLT");
 }
 
+usb::xhci::Controller* xhc;
+
+__attribute__((interrupt))
+void IntHandlerXHCI(InterruptFrame* frame) {
+    while (xhc->PrimaryEventRing()->HasFront()) {
+        if (auto err = ProcessEvent(*xhc)) {
+            Log(kError, "Error while Process Event: %s at %s:%d\n",
+                err.Name(), err.File(), err.Line());
+        }
+    }
+    NotifyEndOfInterrupt();
+}
+
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
 extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref) {
@@ -171,13 +180,9 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
 
     LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
-/*
     uintptr_t CR3 = ReadCR3();
     uintptr_t page_table_top = MakeIdentityPageTable();
-    uintptr_t BAR0_top = 0x10 + 4 * 0;
-    EditPageTable(&page_table_top, BAR0_top, FindPhysicalAddress(BAR0_top, CR3), 160);
     SetCR3(page_table_top);
-*/
 
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
@@ -210,8 +215,17 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     auto err = pci::ScanAllBus();
     Log(kDebug, "ScanAllBus: %s\n", err.Name());
 
+    for (int i = 0; i < pci::num_device; ++i) {
+        const auto& dev = pci::devices[i];
+        auto vendor_id = pci::ReadVendorId(dev);
+        auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
+        Log(kDebug, "%d.d.%d: vend %04x, class %08x, head %02x\n",
+            dev.bus, dev.device, dev.function,
+            vendor_id, class_code, dev.header_type);
+    }
 
-    pci::Device *xhc_dev = nullptr;
+    pci::Device* xhc_dev = nullptr;
+
     for (int i = 0; i < pci::num_device; ++i) {
         if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u)) {
             xhc_dev = &pci::devices[i];
@@ -223,18 +237,18 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     }
 
     if (xhc_dev) {
-        const auto &dev = *xhc_dev;
+        Log(kInfo, "xHC has been found: %d.%d.%d\n",
+            xhc_dev->bus, xhc_dev->device, xhc_dev->function);
+    }
 
-        auto vendor_id = pci::ReadVendorId(dev);
-        auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
-        Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id,
-            class_code, dev.header_type);
+        SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+            reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
+        LoadIDT(sizeof(idt) -1, reinterpret_cast<uintptr_t>(&idt[0]));
 
-        Log(kDebug, "xHC has been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
         const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
         Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
         const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
-        Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
+        Log(kError, "xHC mmio_base = %08lx\n", xhc_mmio_base);
 
         usb::xhci::Controller xhc{xhc_mmio_base};
 
@@ -251,6 +265,7 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
 
         ControlCaching(false);
         Log(kError, "Caching is disabled\n");
+        Log(kError, "mmio_base's physical address is %p\n", FindPhysicalAddress(xhc_mmio_base, ReadCR3()));
 
         {
             auto err = xhc.Initialize();
@@ -263,8 +278,12 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
         Log(kInfo, "xHC starting\n");
         xhc.Run();
 
+        ::xhc = &xhc;
+        __asm__("STI");
+
         usb::HIDMouseDriver::default_observer = MouseObserver;
 
+        /*
         for (int i = 1; i <= xhc.MaxPorts(); ++i) {
             auto port = xhc.PortAt(i);
             Log(kDebug, "Port %d: Is Connected=%d\n", i, port.IsConnected());
@@ -277,13 +296,15 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
                 }
             }
         }
-
+        */
         while (1) {
             if (auto err = ProcessEvent(xhc)) {
-                Log(kWarn, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+                Log (kError, "Erro while Process Event");
             }
-        }
-
         while (1) __asm__("HLT");
     }
+}
+
+extern "C" void __cxa_pure_virtual() {
+    while (1) __asm__("HLT");
 }

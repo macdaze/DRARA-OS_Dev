@@ -282,9 +282,9 @@ namespace {
   }
 
   void RequestHCOwnership(uintptr_t mmio_base, HCCPARAMS1_Bitmap hccp) {
-      Log (kInfo, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
+      Log (kDebug, "mmio_base = %p\nhccp = %0x\n", mmio_base, hccp);
     ExtendedRegisterList extregs{ mmio_base, hccp };
-    Log (kInfo, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
+    Log (kDebug, "extregs.begin() = %p\nextregs.end() = %p\n", extregs.begin(), extregs.end());
        auto it = extregs.begin();
     auto ext_usblegsup = std::find_if(
         extregs.begin(), extregs.end(),
