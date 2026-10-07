@@ -116,6 +116,7 @@ void ExceptionHandlerWithoutError(InterruptFrame *frame) {
 
 usb::xhci::Controller* xhc;
 
+<<<<<<< HEAD
 __attribute__((interrupt))
 void IntHandlerXHCI(InterruptFrame* frame) {
     while (xhc->PrimaryEventRing()->HasFront()) {
@@ -133,6 +134,9 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
     MemoryMap memory_map{memory_map_ref};
     SetLogLevel(kWarn);
+=======
+extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+>>>>>>> parent of 73748f1 (修正：ログ出力)
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             pixel_writer = new(pixel_writer_buf)
@@ -161,6 +165,10 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
                   {100, 100, 100});
 
     console = new(console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
+
+    SetLogLevel(kDebug);
+    SetupIdentityPageTable();
+    SetLogLevel(kWarn);
 
     printk("Welcome to DRARA-OS!\n");
     printk("\n");
@@ -213,6 +221,7 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
     };
 
     auto err = pci::ScanAllBus();
+    SetLogLevel(kWarn);
     Log(kDebug, "ScanAllBus: %s\n", err.Name());
 
     for (int i = 0; i < pci::num_device; ++i) {
@@ -249,6 +258,14 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
         Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
         const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
         Log(kError, "xHC mmio_base = %08lx\n", xhc_mmio_base);
+        Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
+        SetLogLevel(kWarn);
+
+        const uint16_t cs = GetCS();
+        SetupBasicExceptionHandler(MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithoutError),
+                                   reinterpret_cast<uint64_t>(ExceptionHandlerWithError), cs);
+        LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
         usb::xhci::Controller xhc{xhc_mmio_base};
 
@@ -268,8 +285,10 @@ extern "C" void KernelMainNewStack(const FrameBufferConfig &frame_buffer_config_
         Log(kError, "mmio_base's physical address is %p\n", FindPhysicalAddress(xhc_mmio_base, ReadCR3()));
 
         {
+            SetLogLevel(kDebug);
             auto err = xhc.Initialize();
             Log(kInfo, "xhc.Initialize: %s\n", err.Name());
+            SetLogLevel(kWarn);
         }
 
         ControlCaching(true);
